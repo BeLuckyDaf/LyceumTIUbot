@@ -20,7 +20,7 @@ def log(message, answer):
     print("Ответ: {0}".format(answer))
 
 
-# First handle all commands available
+# First handle all commands available and show the menu
 @bot.message_handler(commands=['start'])
 def handle_start(message):
     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
