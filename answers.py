@@ -16,4 +16,6 @@ list_commands = """/start - это главное меню
 
 in_development = "Еще в разработке. Попробуй позже"
 
-schedule = "Выбери группу:"
+schedule_group = "Выбери группу:"
+schedule_day = "Выбери день недели:"
+schedule_type = "Выбери тип недели:"
