@@ -13,6 +13,7 @@ schedule_user_type = {}
 schedule_user_day = {}
 print(bot.get_me())
 
+
 def log(message, answer):
     print("\n\t------")
     from datetime import datetime
@@ -25,10 +26,15 @@ def log(message, answer):
 
 
 def load_schedule(_type="1"):
-    with open("schedule{0}.json".format(_type), 'r', encoding='UTF8') as schedule_data:
-        file = schedule_data.read().replace('\n', '')
-        data = json.loads(file)
-    return data
+    if _type == "1" or _type == "2":
+        with open(constants.schedule_file_path.format(_type), 'r', encoding='UTF8') as schedule_data:
+            file = schedule_data.read().replace('\n', '')
+            data = json.loads(file)
+        return data
+    else:
+        print("VERY STUPID ERROR!\nHOW COULD YOU NOT FIX IT?!")
+        exit()
+
 
 # First handle all commands available and show the menu
 @bot.message_handler(commands=['start'])
@@ -36,7 +42,8 @@ def handle_start(message):
     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
     user_markup.row('/start', '/about', '/help', '/stop')
     user_markup.row('Расписание', 'Как тебя зовут?')
-    bot.send_message(message.from_user.id, 'Я рад, что ты к нам присоединился!\nМеню создано.', reply_markup=user_markup)
+    bot.send_message(message.from_user.id, 'Я рад, что ты к нам присоединился!\nМеню создано.',
+                     reply_markup=user_markup)
     log(message, "Меню создано.")
 
 
@@ -68,8 +75,9 @@ def handle_text(message):
             schedule_user_type[message.from_user.id] = constants.schedule_types.index(message.text)
             schedule_day_queue.append(message.from_user.id)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-            user_markup.row('Понедельник', 'Вторник', 'Среда')
-            user_markup.row('Четверг', 'Пятница', 'Суббота')
+            user_markup.row('Понедельник', 'Вторник')
+            user_markup.row('Среда', 'Четверг')
+            user_markup.row('Пятница', 'Суббота')
             bot.send_message(message.from_user.id, answers.schedule_day, reply_markup=user_markup)
             answer = answers.schedule_day + "\nДобавлен в лист ожидания ответа."
         else:
@@ -90,20 +98,25 @@ def handle_text(message):
         schedule_day_queue.remove(message.from_user.id)
     elif message.from_user.id in schedule_group_queue:
         if message.text in constants.groups:
-            schedule = load_schedule(str(schedule_user_type[message.from_user.id]+1))
-            day = schedule_user_day.pop(message.from_user.id)
-            stype = schedule_user_type.pop(message.from_user.id)
-            answer = """Расписание {0} группы на {1} ({2})
+            if schedule_user_type[message.from_user.id] < 2:
+                schedule = load_schedule(str(schedule_user_type[message.from_user.id] + 1))
+                day = schedule_user_day.pop(message.from_user.id)
+                stype = schedule_user_type.pop(message.from_user.id)
+                answer = """Расписание {0} группы на {1} ({2})
 1: {3}\n2: {4}\n3: {5}\n4: {6}""".format(message.text,
-                                        day,
-                                        constants.schedule_types[stype].lower(),
-                                        schedule[message.text][day]["first"],
-                                        schedule[message.text][day]["second"],
-                                        schedule[message.text][day]["third"],
-                                        schedule[message.text][day]["fourth"])
-            bot.send_message(message.from_user.id, answer)
+                                         day,
+                                         constants.schedule_types[stype].lower(),
+                                         schedule[message.text][day]["first"],
+                                         schedule[message.text][day]["second"],
+                                         schedule[message.text][day]["third"],
+                                         schedule[message.text][day]["fourth"])
+            else:
+                # TODO: HERE ARE THE LAST CHANGES, NEEDS TO BE DONE
+                answer = "Эта опция пока недоступна."
+                pass
         else:
             answer = "НЕТ ТАКОЙ ГРУППЫ!"
+        bot.send_message(message.from_user.id, answer)
         schedule_group_queue.remove(message.from_user.id)
     elif message.text.lower() == "как тебя зовут?":
         answer = answers.myname
@@ -123,4 +136,6 @@ def handle_text(message):
         answer = answers.cant_understand
         bot.send_message(message.from_user.id, answer)
     log(message, answer)
+
+
 bot.polling(none_stop=True, interval=0)
