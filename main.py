@@ -7,6 +7,7 @@ import json
 
 
 bot = telebot.TeleBot(constants.token)
+hide_markup = telebot.types.ReplyKeyboardRemove()
 new_last_changes_queue = []
 schedule_type_queue = []
 schedule_day_queue = []
@@ -54,7 +55,6 @@ def handle_start(message):
 
 @bot.message_handler(commands=['stop'])
 def handle_stop(message):
-    hide_markup = telebot.types.ReplyKeyboardRemove()
     bot.send_message(message.from_user.id, "Меню убрано.", reply_markup=hide_markup)
     log(message, "Меню убрано.")
 
@@ -105,7 +105,7 @@ def handle_text(message):
                 schedule_type_queue.remove(message.from_user.id)
                 if last_changes_id == "0":
                     answer = "Я пока не знаю изменений..."
-                    bot.send_message(message.from_user.id, answer)
+                    bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
                 else:
                     bot.send_photo(message.from_user.id, last_changes_id)
                     answer = "Попытались отправить фото, надеемся, получилось."
@@ -122,7 +122,7 @@ def handle_text(message):
                 answer = answers.schedule_day + "\nДобавлен в лист ожидания ответа."
         else:
             answer = "НЕТ ТАКОГО ТИПА РАСПИСАНИЯ!"
-            bot.send_message(message.from_user.id, answer)
+            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
         schedule_type_queue.remove(message.from_user.id)
     # HANDLING SCHEDULE REQUEST (GROUP)
     elif message.from_user.id in schedule_day_queue:
@@ -136,6 +136,7 @@ def handle_text(message):
             answer = answers.schedule_group + "\nДобавлен в лист ожидания ответа."
         else:
             answer = "НЕТ ТАКОГО ДНЯ НЕДЕЛИ!"
+            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
         schedule_day_queue.remove(message.from_user.id)
     # HANDLING SCHEDULE REQUEST (ASSEMBLING THE MESSAGE AND SENDING IT)
     elif message.from_user.id in schedule_group_queue:
@@ -154,7 +155,7 @@ def handle_text(message):
                                          schedule[message.text][day]["fourth"])
         else:
             answer = "НЕТ ТАКОЙ ГРУППЫ!"
-        bot.send_message(message.from_user.id, answer)
+        bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
         schedule_group_queue.remove(message.from_user.id)
     elif message.text.lower() == "как тебя зовут?":
         answer = answers.myname
