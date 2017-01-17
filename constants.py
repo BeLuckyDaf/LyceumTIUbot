@@ -1,5 +1,5 @@
 # Important
-token = "316879287:AAGf6RnXzarfEZA_Sl6Uiqb_RzLehn350TE"
+token = "316879287:AAGa7sj9yaO-3FjL55U97cNaKZaXTcIl6Dg"
 schedule_file_path = "schedule{0}.json"
 # Less important
 schedule_types = ["Числитель", "Знаменатель", "Последние изменения"]

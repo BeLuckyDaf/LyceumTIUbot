@@ -3,18 +3,21 @@
 import telebot
 import answers
 import constants
-import json
+import json_file
 
 
 bot = telebot.TeleBot(constants.token)
 hide_markup = telebot.types.ReplyKeyboardRemove()
-new_last_changes_queue = []
+new_last_changes_ten_queue = []
+new_last_changes_eleven_queue = []
+lastch_type_queue = []
+lastch_settype_queue = []
 schedule_type_queue = []
 schedule_day_queue = []
 schedule_group_queue = []
 schedule_user_type = {}
 schedule_user_day = {}
-last_changes_id = "0"
+last_changes_id = ["0", "0"]
 
 
 print(bot.get_me())
@@ -33,13 +36,13 @@ def log(message, answer):
 
 def load_schedule(_type="1"):
     if _type == "1" or _type == "2":
-        with open(constants.schedule_file_path.format(_type), 'r', encoding='UTF8') as schedule_data:
-            file = schedule_data.read().replace('\n', '')
-            data = json.loads(file)
+        data = json_file.Json_File(constants.schedule_file_path.format(_type), 'r', 'UTF8').data
         return data
     else:
         print("VERY STUPID ERROR!\nHOW COULD YOU NOT FIX IT?!")
         exit()
+        
+
 
 
 # First handle all commands available and show the menu
@@ -62,11 +65,17 @@ def handle_stop(message):
 @bot.message_handler(commands=['setlast'])
 def handle_setlast(message):
     if message.from_user.id in constants.admins:
-        new_last_changes_queue.append(message.from_user.id)
-        answer = "Загрузите новые последние изменения:"
+        lastch_settype_queue.append(message.from_user.id)
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        user_markup.row('10', '11')
+        answer = "Выбери группу:"
+        bot.send_message(message.from_user.id, answer, reply_markup=user_markup)
     else:
-        answer = "Только админ и его приближённые способны на такое!"
-    bot.send_message(message.from_user.id, answer)
+        answer = """Только админ и его приближённые способны на такое!
+Забудь, что написал это, смертный! Я тоже притворюсь, будто не видел.
+Согласен? Вот и отлично!
+...Хееееей! Чем могу помочь?"""
+        bot.send_message(message.from_user.id, answer)
     log(message, answer)
 
 
@@ -77,18 +86,24 @@ def handle_about(message):
 
 
 @bot.message_handler(commands=['help'])
-def handle_about(message):
+def handle_help(message):
     bot.send_message(message.from_user.id, answers.list_commands)
     log(message, answers.list_commands)
 
 
 @bot.message_handler(content_types=["photo"])
 def handle_photo(message):
-    if message.from_user.id in new_last_changes_queue:
-        new_last_changes_queue.remove(message.from_user.id)
-        global last_changes_id
-        last_changes_id = str(message.photo[-1].file_id)
-        answer = "Принял файл... Наверное..."
+    global last_changes_id
+    if message.from_user.id in new_last_changes_ten_queue:
+        new_last_changes_ten_queue.remove(message.from_user.id)
+        last_changes_id[0] = str(message.photo[-1].file_id)
+        answer = "Принял файл! Последние изменения обновлены!"
+        bot.send_message(message.from_user.id, answer)
+        log(message, answer)
+    elif message.from_user.id in new_last_changes_eleven_queue:
+        new_last_changes_eleven_queue.remove(message.from_user.id)
+        last_changes_id[1] = str(message.photo[-1].file_id)
+        answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
         log(message, answer)
 
@@ -96,20 +111,53 @@ def handle_photo(message):
 # Then texts
 @bot.message_handler(content_types=["text"])
 def handle_text(message):
+    answer = ""
+    if message.from_user.id in lastch_settype_queue:
+        lastch_settype_queue.remove(message.from_user.id)
+        if (message.text == "10"):
+            new_last_changes_ten_queue.append(message.from_user.id)
+            answer = "Загружай:"
+            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+        elif (message.text == "11"):
+            new_last_changes_eleven_queue.append(message.from_user.id)
+            answer = "Загружай:"
+            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+        else:
+            answer = "Лол..."
+            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+        log(message, answer)
+    elif message.from_user.id in lastch_type_queue:
+        lastch_type_queue.remove(message.from_user.id)
+        if (message.text == "10"):
+            if last_changes_id[0] == "0":
+                    answer = "Я пока не знаю изменений..."
+                    bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            else:
+                    bot.send_chat_action(message.from_user.id, 'upload_photo')
+                    bot.send_photo(message.from_user.id, last_changes_id[0], reply_markup=hide_markup)
+                    answer = "Попытались отправить фото, надеемся, получилось."
+                    log(message, answer)
+        elif (message.text == "11"):
+            if last_changes_id[1] == "0":
+                    answer = "Я пока не знаю изменений..."
+                    bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            else:
+                    bot.send_chat_action(message.from_user.id, 'upload_photo')
+                    bot.send_photo(message.from_user.id, last_changes_id[1], reply_markup=hide_markup)
+                    answer = "Попытались отправить фото, надеемся, получилось."
+                    log(message, answer)
     # HANDLING SCHEDULE REQUEST (DAY OF A WEEK)
-    if message.from_user.id in schedule_type_queue:
+    elif message.from_user.id in schedule_type_queue:
         if message.text in constants.schedule_types:
             schedule_user_type[message.from_user.id] = constants.schedule_types.index(message.text)
             # IF LAST CHANGES:
             if constants.schedule_types.index(message.text) == 2:
                 schedule_type_queue.remove(message.from_user.id)
-                if last_changes_id == "0":
-                    answer = "Я пока не знаю изменений..."
-                    bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
-                else:
-                    bot.send_photo(message.from_user.id, last_changes_id)
-                    answer = "Попытались отправить фото, надеемся, получилось."
-                log(message, answer)
+                lastch_type_queue.append(message.from_user.id)
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+                user_markup.row('10', '11')
+                bot.send_message(message.from_user.id, answers.lastch_type, reply_markup=user_markup)
+                answer = answers.lastch_type + "\nДобавлен в лист ожидания ответа."
                 return
             # END IF
             else:
@@ -174,6 +222,7 @@ def handle_text(message):
     else:
         answer = answers.cant_understand
         bot.send_message(message.from_user.id, answer)
+    
     log(message, answer)
 
 
