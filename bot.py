@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # LyceumTIUbot
 
 import telebot
@@ -41,8 +42,6 @@ def load_schedule(_type="1"):
     else:
         print("VERY STUPID ERROR!\nHOW COULD YOU NOT FIX IT?!")
         exit()
-        
-
 
 
 # First handle all commands available and show the menu
