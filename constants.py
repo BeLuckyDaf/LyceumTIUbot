@@ -1,8 +1,9 @@
 # Important
 token = "316879287:AAGa7sj9yaO-3FjL55U97cNaKZaXTcIl6Dg"
-schedule_file_path = "schedule{0}.json"
+schedule_path = "schedule{0}.json"
+users_path = "users.json"
 # Less important
 schedule_types = ["Числитель", "Знаменатель", "Последние изменения"]
 schedule_days = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
 groups = ["101", "102", "103", "104", "111", "112", "113", "114"]
-admins = [146505982, 183562293]
+# admins = [146505982, 183562293]

@@ -4,9 +4,23 @@ if __name__ == '__main__':
 import json
 import constants
 
-class Json_File:
-    
-    def __init__(self, file_path, flags='r', encod='UTF8'):
-        with open(file_path, flags, encoding=encod) as file:
+
+class JsonFile:
+
+    def __init__(self, path, encod='UTF8'):
+        self.filepath = path
+        self.encod = encod
+        self.data = object
+
+    def getcontents(self):
+        with open(self.filepath, "r", encoding=self.encod) as file:
             data_str = file.read().replace('\n', '')
             self.data = json.loads(data_str)
+        return self.data
+
+    def setpath(self, newpath):
+        self.filepath = newpath
+
+    def writecontents(self, contents: dict):
+        with open(self.filepath, "w", encoding=self.encod) as file:
+            file.write(json.dumps(contents))

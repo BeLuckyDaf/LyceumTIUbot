@@ -5,9 +5,13 @@ import telebot
 import answers
 import constants
 import json_file
+import usermgr
 
-
+# Class objects
 bot = telebot.TeleBot(constants.token)
+schedule_data = json_file.JsonFile("schedule1.json")
+users_data = json_file.JsonFile(constants.users_path)
+# Lists and variables / queues
 hide_markup = telebot.types.ReplyKeyboardRemove()
 new_last_changes_ten_queue = []
 new_last_changes_eleven_queue = []
@@ -37,7 +41,8 @@ def log(message, answer):
 
 def load_schedule(_type="1"):
     if _type == "1" or _type == "2":
-        data = json_file.Json_File(constants.schedule_file_path.format(_type), 'r', 'UTF8').data
+        schedule_data.setpath(constants.schedule_file_path.format(_type))
+        data = schedule_data.getcontents()
         return data
     else:
         print("VERY STUPID ERROR!\nHOW COULD YOU NOT FIX IT?!")
@@ -63,7 +68,7 @@ def handle_stop(message):
 
 @bot.message_handler(commands=['setlast'])
 def handle_setlast(message):
-    if message.from_user.id in constants.admins:
+    if usermgr.isadmin(users_data, message.from_user.id):
         lastch_settype_queue.append(message.from_user.id)
         user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         user_markup.row('10', '11')
@@ -82,6 +87,9 @@ def handle_setlast(message):
 def handle_about(message):
     bot.send_message(message.from_user.id, answers.aboutme)
     log(message, answers.aboutme)
+# def handle_about(message):
+#    bot.send_message(message.from_user.id, answers.aboutme)
+#    log(message, answers.aboutme)
 
 
 @bot.message_handler(commands=['help'])
