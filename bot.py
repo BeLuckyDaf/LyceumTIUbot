@@ -41,7 +41,7 @@ def log(message, answer):
 
 def load_schedule(_type="1"):
     if _type == "1" or _type == "2":
-        schedule_data.setpath(constants.schedule_file_path.format(_type))
+        schedule_data.setpath(constants.schedule_path.format(_type))
         data = schedule_data.getcontents()
         return data
     else:
