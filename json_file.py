@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 if __name__ == '__main__':
     print("You can't launch the module file directly.\nPlease, import it.")
     
@@ -5,7 +7,7 @@ import json
 import constants
 
 
-class JsonFile:
+class JsonFile(object):
 
     def __init__(self, path, encod='UTF8'):
         self.filepath = path

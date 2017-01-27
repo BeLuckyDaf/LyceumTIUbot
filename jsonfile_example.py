@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import json_file
 import usermgr
 
@@ -13,8 +15,8 @@ data["admins"].append({"id" : 183562293})
 # Remove a record where id = 146505982
 data["admins"].remove({"id" : 146505982})
 
-# Existing admin id
+# Existing admin id -> returns true
 print(usermgr.isadmin(jsonfile, 183562293))
 
-#
+# Nonexistent admin id -> returns false
 print(usermgr.isadmin(jsonfile, 111111111))
