@@ -6,6 +6,7 @@ import answers
 import constants
 import json_file
 import usermgr
+import cherrypy
 
 # Class objects
 bot = telebot.TeleBot(constants.token)
@@ -25,7 +26,20 @@ schedule_user_day = {}
 last_changes_id = ["0", "0"]
 
 
-print(bot.get_me())
+class WebhookServer(object):
+    @cherrypy.expose
+    def index(self):
+        if 'content-length' in cherrypy.request.headers and \
+                        'content-type' in cherrypy.request.headers and \
+                        cherrypy.request.headers['content-type'] == 'application/json':
+            length = int(cherrypy.request.headers['content-length'])
+            json_string = cherrypy.request.body.read(length).decode("utf-8")
+            update = telebot.types.Update.de_json(json_string)
+            # print(bot.get_me())
+            bot.process_new_updates(update)
+            return ''
+        else:
+            raise cherrypy.HTTPError(403)
 
 
 def log(message, answer):
@@ -233,4 +247,17 @@ def handle_text(message):
     log(message, answer)
 
 
-bot.polling(none_stop=True, interval=0)
+# legacy: bot.polling(none_stop=True, interval=0)
+bot.remove_webhook()
+bot.set_webhook(url=constants.WEBHOOK_URL_BASE + constants.WEBHOOK_URL_PATH,
+                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+
+cherrypy.config.update({
+    'server.socket_host': constants.WEBHOOK_LISTEN,
+    'server.socket_port': constants.WEBHOOK_PORT,
+    'server.ssl_module': 'builtin',
+    'server.ssl_certificate': constants.WEBHOOK_SSL_CERT,
+    'server.ssl_private_key': constants.WEBHOOK_SSL_PRIV
+})
+
+cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
