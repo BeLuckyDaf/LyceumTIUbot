@@ -7,8 +7,11 @@ import constants
 import json_file
 import usermgr
 import cherrypy
+import logging
 
 # Class objects
+logger = telebot.logger
+telebot.logger.setLevel(logging.INFO)
 bot = telebot.TeleBot(constants.token)
 schedule_data = json_file.JsonFile("schedule1.json")
 users_data = json_file.JsonFile(constants.users_path)
@@ -26,17 +29,17 @@ schedule_user_day = {}
 last_changes_id = ["0", "0"]
 
 
+# WebhookServer, process webhook calls
 class WebhookServer(object):
     @cherrypy.expose
     def index(self):
         if 'content-length' in cherrypy.request.headers and \
-                        'content-type' in cherrypy.request.headers and \
-                        cherrypy.request.headers['content-type'] == 'application/json':
+           'content-type' in cherrypy.request.headers and \
+           cherrypy.request.headers['content-type'] == 'application/json':
             length = int(cherrypy.request.headers['content-length'])
             json_string = cherrypy.request.body.read(length).decode("utf-8")
             update = telebot.types.Update.de_json(json_string)
-            # print(bot.get_me())
-            bot.process_new_updates(update)
+            bot.process_new_updates([update])
             return ''
         else:
             raise cherrypy.HTTPError(403)
@@ -250,7 +253,7 @@ def handle_text(message):
 # legacy: bot.polling(none_stop=True, interval=0)
 bot.remove_webhook()
 bot.set_webhook(url=constants.WEBHOOK_URL_BASE + constants.WEBHOOK_URL_PATH,
-                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+                certificate=open('webhook_cert.pem', 'r'))
 
 cherrypy.config.update({
     'server.socket_host': constants.WEBHOOK_LISTEN,
