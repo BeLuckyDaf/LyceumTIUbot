@@ -11,8 +11,8 @@ groups = ["101", "102", "103", "104", "111", "112", "113", "114"]
 # admins = [146505982, 183562293]
 
 # CHERRYPY CONSTANTS
-WEBHOOK_HOST = "tyuiu.ml"
-WEBHOOK_PORT = 443
+WEBHOOK_HOST = "138.68.134.251"
+WEBHOOK_PORT = 88
 WEBHOOK_LISTEN = "0.0.0.0"
 
 WEBHOOK_SSL_CERT = './webhook_cert.pem'  # Path to the ssl certificate
