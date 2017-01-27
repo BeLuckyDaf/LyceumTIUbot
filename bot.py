@@ -133,7 +133,7 @@ def handle_photo(message):
 
 
 # Then texts
-@bot.message_handler(content_types=["text"])
+@bot.message_handler(func=lambda message: True, content_types=["text"])
 def handle_text(message):
     answer = ""
     if message.from_user.id in lastch_settype_queue:
@@ -251,10 +251,15 @@ def handle_text(message):
 
 
 # legacy: bot.polling(none_stop=True, interval=0)
-bot.remove_webhook()
-bot.set_webhook(url=constants.WEBHOOK_URL_BASE + constants.WEBHOOK_URL_PATH,
-                certificate=open('webhook_cert.pem', 'r'))
 
+# Remove webhook, it fails sometimes the set if there is a previous webhook
+bot.remove_webhook()
+
+# Set webhook
+bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
+                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+
+# Start cherrypy server
 cherrypy.config.update({
     'server.socket_host': constants.WEBHOOK_LISTEN,
     'server.socket_port': constants.WEBHOOK_PORT,
@@ -264,3 +269,4 @@ cherrypy.config.update({
 })
 
 cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
+
