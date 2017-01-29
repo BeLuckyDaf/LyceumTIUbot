@@ -17,16 +17,17 @@ schedule_data = json_file.JsonFile("schedule1.json")
 users_data = json_file.JsonFile(constants.users_path)
 # Lists and variables / queues
 hide_markup = telebot.types.ReplyKeyboardRemove()
-new_last_changes_ten_queue = []
-new_last_changes_eleven_queue = []
-lastch_type_queue = []
-lastch_settype_queue = []
-schedule_type_queue = []
-schedule_day_queue = []
-schedule_group_queue = []
+# new_last_changes_ten_queue = []
+# new_last_changes_eleven_queue = []
+# lastch_type_queue = []
+# lastch_settype_queue = []
+# schedule_type_queue = []
+# schedule_day_queue = []
+# schedule_group_queue = []
 schedule_user_type = {}
 schedule_user_day = {}
 last_changes_id = ["0", "0"]
+queue = []
 
 
 # WebhookServer, process webhook calls
@@ -86,7 +87,7 @@ def handle_stop(message):
 @bot.message_handler(commands=['setlast'])
 def handle_setlast(message):
     if usermgr.isadmin(users_data, message.from_user.id):
-        lastch_settype_queue.append(message.from_user.id)
+        queue["lastch_settype"].append({"id": message.from_user.id})
         user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         user_markup.row('10', '11')
         answer = "Выбери группу:"
@@ -118,14 +119,14 @@ def handle_help(message):
 @bot.message_handler(content_types=["photo"])
 def handle_photo(message):
     global last_changes_id
-    if message.from_user.id in new_last_changes_ten_queue:
-        new_last_changes_ten_queue.remove(message.from_user.id)
+    if {"id": message.from_user.id} in queue["new_last_changes_ten"]:
+        queue["new_last_changes_ten"].remove({"id": message.from_user.id})
         last_changes_id[0] = str(message.photo[-1].file_id)
         answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
         log(message, answer)
-    elif message.from_user.id in new_last_changes_eleven_queue:
-        new_last_changes_eleven_queue.remove(message.from_user.id)
+    elif {"id": message.from_user.id} in queue["new_last_changes_eleven"]:
+        queue["new_last_changes_eleven"].remove({"id": message.from_user.id})
         last_changes_id[1] = str(message.photo[-1].file_id)
         answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
@@ -136,22 +137,22 @@ def handle_photo(message):
 @bot.message_handler(func=lambda message: True, content_types=["text"])
 def handle_text(message):
     answer = ""
-    if message.from_user.id in lastch_settype_queue:
-        lastch_settype_queue.remove(message.from_user.id)
+    if {"id": message.from_user.id} in queue["lastch_settype"]:
+        queue["lastch_settype"].remove({"id": message.from_user.id})
         if (message.text == "10"):
-            new_last_changes_ten_queue.append(message.from_user.id)
+            queue["new_last_changes_ten"].append({"id": message.from_user.id})
             answer = "Загружай:"
             bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
         elif (message.text == "11"):
-            new_last_changes_eleven_queue.append(message.from_user.id)
+            queue["new_last_changes_eleven"].append({"id": message.from_user.id})
             answer = "Загружай:"
             bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
         else:
             answer = "Лол..."
             bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
         log(message, answer)
-    elif message.from_user.id in lastch_type_queue:
-        lastch_type_queue.remove(message.from_user.id)
+    elif {"id":message.from_user.id} in queue["lastch_type"]:
+        queue["lastch_type"].remove({"id":message.from_user.id})
         if (message.text == "10"):
             if last_changes_id[0] == "0":
                     answer = "Я пока не знаю изменений..."
@@ -171,13 +172,13 @@ def handle_text(message):
                     answer = "Попытались отправить фото, надеемся, получилось."
                     log(message, answer)
     # HANDLING SCHEDULE REQUEST (DAY OF A WEEK)
-    elif message.from_user.id in schedule_type_queue:
+    elif {"id": message.from_user.id} in queue["schedule_type"]:
         if message.text in constants.schedule_types:
             schedule_user_type[message.from_user.id] = constants.schedule_types.index(message.text)
             # IF LAST CHANGES:
             if constants.schedule_types.index(message.text) == 2:
-                schedule_type_queue.remove(message.from_user.id)
-                lastch_type_queue.append(message.from_user.id)
+                queue["schedule_type"].remove({"id": message.from_user.id})
+                queue["lastch_type"].append({"id":message.from_user.id})
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('10', '11')
                 bot.send_message(message.from_user.id, answers.lastch_type, reply_markup=user_markup)
@@ -185,7 +186,7 @@ def handle_text(message):
                 return
             # END IF
             else:
-                schedule_day_queue.append(message.from_user.id)
+                queue["schedule_day"].append({"id": message.from_user.id})
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('Понедельник', 'Вторник')
                 user_markup.row('Среда', 'Четверг')
@@ -195,12 +196,12 @@ def handle_text(message):
         else:
             answer = "НЕТ ТАКОГО ТИПА РАСПИСАНИЯ!"
             bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
-        schedule_type_queue.remove(message.from_user.id)
+            queue["schedule_type"].remove({"id": message.from_user.id})
     # HANDLING SCHEDULE REQUEST (GROUP)
-    elif message.from_user.id in schedule_day_queue:
+    elif {"id": message.from_user.id} in queue["schedule_day"]:
         if message.text in constants.schedule_days:
             schedule_user_day[message.from_user.id] = message.text
-            schedule_group_queue.append(message.from_user.id)
+            queue["schedule_group"].append({"id": message.from_user.id})
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             user_markup.row("101", "102", "103", "104")
             user_markup.row("111", "112", "113", "114")
@@ -209,9 +210,9 @@ def handle_text(message):
         else:
             answer = "НЕТ ТАКОГО ДНЯ НЕДЕЛИ!"
             bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
-        schedule_day_queue.remove(message.from_user.id)
+            queue["schedule_day"].remove({"id": message.from_user.id})
     # HANDLING SCHEDULE REQUEST (ASSEMBLING THE MESSAGE AND SENDING IT)
-    elif message.from_user.id in schedule_group_queue:
+    elif {"id": message.from_user.id} in queue["schedule_group"]:
         if message.text in constants.groups:
             if schedule_user_type[message.from_user.id] < 2:
                 schedule = load_schedule(str(schedule_user_type[message.from_user.id] + 1))
@@ -228,7 +229,7 @@ def handle_text(message):
         else:
             answer = "НЕТ ТАКОЙ ГРУППЫ!"
         bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
-        schedule_group_queue.remove(message.from_user.id)
+        queue["schedule_group"].remove({"id": message.from_user.id})
     elif message.text.lower() == "как тебя зовут?":
         answer = answers.myname
         bot.send_message(message.from_user.id, answer)
@@ -237,7 +238,7 @@ def handle_text(message):
         bot.send_message(message.from_user.id, answer)
     # HANDLING SCHEDULE REQUEST (SCHEDULE TYPE)
     elif message.text == "Расписание":
-        schedule_type_queue.append(message.from_user.id)
+        queue["schedule_type"].append({"id": message.from_user.id})
         user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         user_markup.row('Числитель', 'Знаменатель')
         user_markup.row('Последние изменения')
