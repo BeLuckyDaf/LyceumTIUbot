@@ -253,15 +253,15 @@ def handle_text(message):
     
     log(message, answer)
 
-bot.remove_webhook()
-bot.polling(none_stop=True, interval=0)
+# Legacy
+# bot.polling(none_stop=True, interval=0)
 
 # Remove webhook, it fails sometimes the set if there is a previous webhook
-# bot.remove_webhook()
+bot.remove_webhook()
 
 # Set webhook
-# bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
-#                 certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
+                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
 
 # Start cherrypy server
 cherrypy.config.update({
@@ -272,5 +272,5 @@ cherrypy.config.update({
     'server.ssl_private_key': constants.WEBHOOK_SSL_PRIV
 })
 
-# cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
+cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
 
