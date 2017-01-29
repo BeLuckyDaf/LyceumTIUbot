@@ -27,7 +27,8 @@ hide_markup = telebot.types.ReplyKeyboardRemove()
 schedule_user_type = {}
 schedule_user_day = {}
 last_changes_id = ["0", "0"]
-queue = []
+queue = {"new_last_changes_ten": [], "new_last_changes_eleven": [], "lastch_type": [],
+         "lastch_settype": [], "schedule_type": [], "schedule_day": [], "schedule_group": []}
 
 
 # WebhookServer, process webhook calls
@@ -178,7 +179,7 @@ def handle_text(message):
             # IF LAST CHANGES:
             if constants.schedule_types.index(message.text) == 2:
                 queue["schedule_type"].remove({"id": message.from_user.id})
-                queue["lastch_type"].append({"id":message.from_user.id})
+                queue["lastch_type"].append({"id": message.from_user.id})
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('10', '11')
                 bot.send_message(message.from_user.id, answers.lastch_type, reply_markup=user_markup)
@@ -187,6 +188,7 @@ def handle_text(message):
             # END IF
             else:
                 queue["schedule_day"].append({"id": message.from_user.id})
+                queue["schedule_type"].remove({"id": message.from_user.id})
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('Понедельник', 'Вторник')
                 user_markup.row('Среда', 'Четверг')
@@ -202,6 +204,7 @@ def handle_text(message):
         if message.text in constants.schedule_days:
             schedule_user_day[message.from_user.id] = message.text
             queue["schedule_group"].append({"id": message.from_user.id})
+            queue["schedule_day"].remove({"id": message.from_user.id})
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             user_markup.row("101", "102", "103", "104")
             user_markup.row("111", "112", "113", "114")
@@ -250,15 +253,15 @@ def handle_text(message):
     
     log(message, answer)
 
-
-# legacy: bot.polling(none_stop=True, interval=0)
+bot.remove_webhook()
+bot.polling(none_stop=True, interval=0)
 
 # Remove webhook, it fails sometimes the set if there is a previous webhook
-bot.remove_webhook()
+# bot.remove_webhook()
 
 # Set webhook
-bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
-                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+# bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
+#                 certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
 
 # Start cherrypy server
 cherrypy.config.update({
@@ -269,5 +272,5 @@ cherrypy.config.update({
     'server.ssl_private_key': constants.WEBHOOK_SSL_PRIV
 })
 
-cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
+# cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
 
