@@ -28,7 +28,8 @@ schedule_user_type = {}
 schedule_user_day = {}
 last_changes_id = ["0", "0"]
 queue = {"new_last_changes_ten": [], "new_last_changes_eleven": [], "lastch_type": [],
-         "lastch_settype": [], "schedule_type": [], "schedule_day": [], "schedule_group": []}
+         "lastch_settype": [], "schedule_type": [], "schedule_day": [], "schedule_group": [],
+         "newadmin": [], "newsub": [], "newmoder": []}
 
 
 # WebhookServer, process webhook calls
@@ -83,6 +84,26 @@ def handle_start(message):
 def handle_stop(message):
     bot.send_message(message.from_user.id, "Меню убрано.", reply_markup=hide_markup)
     log(message, "Меню убрано.")
+
+
+@bot.message_handler(commands=['newadmin'])
+def handle_newadmin(message):
+    if usermgr.isadmin(users_data, message.from_user.id):
+        queue["newadmin"].append(message.from_user.id)
+        send_message(message.from_user.id, "Отправь контакт нового админа: ")
+
+
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    if message.from_user.id in queue["newadmin"]:
+        queue["newadmin"].remove(message.from_user.id)
+        usermgr.adduser(users_data, message.contact.user_id)
+    elif message.from_user.id in queue["newsub"]:
+        queue["newsub"].remove(message.from_user.id)
+        usermgr.adduser(users_data, message.contact.user_id)
+    elif message.from_user.id in queue["newmoder"]:
+        queue["newmoder"].remove(message.from_user.id)
+        usermgr.adduser(users_data, message.contact.user_id) 
 
 
 @bot.message_handler(commands=['setlast'])
