@@ -2,19 +2,23 @@
 
 import json_file
 
-
-def newadmin(jsonfile: json_file.JsonFile, userid: int):
-    data = jsonfile.getcontents()
-    if not ({'id': userid} in data["admins"]):
-        data["admins"].append({'id': userid})
-    jsonfile.writecontents(data)
+usertier = ["admins", "moderators", "subscribers"]
 
 
-def newmoder(jsonfile: json_file.JsonFile, userid: int):
-    data = jsonfile.getcontents()
-    if not ({'id': userid} in data["moderators"]):
-        data["moderators"].append({'id': userid})
-    jsonfile.writecontents(data)
+def adduser(tier, jsonfile: json_file.JsonFile, userid: int):
+    if tier in usertier:
+		data = jsonfile.getcontents()
+		if not ({'id': userid} in data[tier]):
+		    data[tier].append({'id': userid})
+		jsonfile.writecontents(data)
+
+
+def removeuser(tier, jsonfile: json_file.JsonFile, userid: int):
+    if tier in usertier:
+		data = jsonfile.getcontents()
+		if ({'id': userid} in data[tier]):
+		    data[tier].remove({'id': userid})
+		jsonfile.writecontents(data)
 
 
 def isadmin(jsonfile: json_file.JsonFile, userid: int) -> bool:
