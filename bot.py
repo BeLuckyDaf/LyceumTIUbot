@@ -29,7 +29,7 @@ schedule_user_day = {}
 last_changes_id = ["0", "0"]
 queue = {"new_last_changes_ten": [], "new_last_changes_eleven": [], "lastch_type": [],
          "lastch_settype": [], "schedule_type": [], "schedule_day": [], "schedule_group": [],
-         "newadmin": [], "newsub": [], "newmoder": []}
+         "newadmin": [], "newmoder": [], "sendall": []}
 
 
 # WebhookServer, process webhook calls
@@ -57,8 +57,8 @@ def log(message, answer):
                                                                  str(message.from_user.id),
                                                                  message.text))
     print("Ответ: {0}".format(answer))
-
-
+    
+    
 def load_schedule(_type="1"):
     if _type == "1" or _type == "2":
         schedule_data.setpath(constants.schedule_path.format(_type))
@@ -85,25 +85,81 @@ def handle_stop(message):
     bot.send_message(message.from_user.id, "Меню убрано.", reply_markup=hide_markup)
     log(message, "Меню убрано.")
 
+    
+@bot.message_handler(commands=['sendall'])
+def handle_sendall(message):
+    if usermgr.isadmin(users_data, message.from_user.id) or usermgr.ismoder(users_data, message.from_user.id):
+        if not {"id": message.from_user.id} in queue['sendall']:
+            queue['sendall'].append({"id": message.from_user.id})
+        bot.send_message(message.from_user.id, "Что же мы всем отправим?")
 
+        
+@bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'])
+def handle_sendall_forward(message):
+    mid = message.message_id
+    queue['sendall'].remove({"id": message.from_user.id})
+    for sub in usermgr.get_subs(users_data):
+        bot.forward_message(sub['id'], message.from_user.id, mid)        
+    
+@bot.message_handler(commands=['sub'])
+def handle_sub(message):
+    if not usermgr.issub(users_data, message.from_user.id):
+        usermgr.adduser("subscribers", users_data, message.from_user.id)
+        bot.send_sticker(message.from_user.id, constants.thumbup)
+        bot.send_message(message.from_user.id, "Поздравляем! Теперь вы будете получать все новости!\n/unsub чтобы отписаться")
+    else:
+        bot.send_sticker(message.from_user.id, constants.hugs)
+        bot.send_message(message.from_user.id, "Вы уже подписаны на новости! :)\nМы рады, что вы цените наш труд.")
+
+@bot.message_handler(commands=['unsub'])
+def handle_unsub(message):
+    if usermgr.issub(users_data, message.from_user.id):
+        usermgr.removeuser("subscribers", users_data, message.from_user.id)
+        bot.send_sticker(message.from_user.id, constants.armsin)
+        bot.send_message(message.from_user.id, """Сожалеем, что вы приняли такое решение!
+Мы будем благодарны, если вы расскажете, что вам не понравилось.
+Напишите нам: beluckydaf@gmail.com""")
+        bot.send_contact(message.from_user.id, "+79129992548", "Vladislav", "Smirnov")
+    
+    
 @bot.message_handler(commands=['newadmin'])
 def handle_newadmin(message):
     if usermgr.isadmin(users_data, message.from_user.id):
         queue["newadmin"].append(message.from_user.id)
-        send_message(message.from_user.id, "Отправь контакт нового админа: ")
+        if message.from_user.id in queue["newmoder"]:
+            queue["newmoder"].remove(message.from_user.id)
+        bot.send_message(message.from_user.id, "Отправь контакт нового админа: ")
+
+
+@bot.message_handler(commands=['newmoder'])
+def handle_newmoder(message):
+    if usermgr.isadmin(users_data, message.from_user.id):
+        queue["newmoder"].append(message.from_user.id)
+        if message.from_user.id in queue["newadmin"]:
+            queue["newadmin"].remove(message.from_user.id)
+        bot.send_message(message.from_user.id, "Отправь контакт нового модератора: ")
 
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
+    if not message.contact.user_id:
+        if message.from_user.id in queue["newadmin"]:
+            queue["newadmin"].remove(message.from_user.id)
+        elif message.from_user.id in queue["newmoder"]:
+            queue["newmoder"].remove(message.from_user.id)
+        bot.send_message(message.from_user.id, "Увы, этого человека нет в Telegram.")
     if message.from_user.id in queue["newadmin"]:
         queue["newadmin"].remove(message.from_user.id)
-        usermgr.adduser(users_data, message.contact.user_id)
-    elif message.from_user.id in queue["newsub"]:
-        queue["newsub"].remove(message.from_user.id)
-        usermgr.adduser(users_data, message.contact.user_id)
+        usermgr.adduser("admins", users_data, message.contact.user_id)
+        bot.send_message(message.from_user.id, "Готово!")
+        bot.send_message(message.contact.user_id, answers.admin_greeting)
+        bot.send_message(message.contact.user_id, answers.great_resp)
     elif message.from_user.id in queue["newmoder"]:
         queue["newmoder"].remove(message.from_user.id)
-        usermgr.adduser(users_data, message.contact.user_id) 
+        usermgr.adduser("moderators", users_data, message.contact.user_id) 
+        bot.send_message(message.from_user.id, "Готово!")
+        bot.send_message(message.contact.user_id, answers.moderator_greeting)
+        bot.send_message(message.contact.user_id, answers.great_resp)
 
 
 @bot.message_handler(commands=['setlast'])
@@ -274,11 +330,11 @@ def handle_text(message):
     
     log(message, answer)
 
-# Legacy
-# bot.polling(none_stop=True, interval=0)
-
 # Remove webhook, it fails sometimes the set if there is a previous webhook
 bot.remove_webhook()
+
+# Legacy
+# bot.polling(none_stop=True, interval=0)
 
 # Set webhook
 bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,

@@ -21,3 +21,9 @@ WEBHOOK_SSL_PRIV = './webhook_pkey.pem'  # Path to the ssl private key
 WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
 WEBHOOK_URL_PATH = "/%s/" % token
 # END OF CHERRYPY
+
+# STICKERS IDS
+thumbup = "BQADAgADGQADyIsGAAFl6KYZBflVyQI"
+hugs = "BQADAgADPgADyIsGAAEuCrQ7AXgedwI"
+armsin = "BQADAgADIwADyIsGAAHeuQrNOU12cgI"
+# END OF STICKERS
