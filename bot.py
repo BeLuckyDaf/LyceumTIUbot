@@ -9,21 +9,17 @@ import usermgr
 import cherrypy
 import logging
 
+
 # Class objects
 logger = telebot.logger
 telebot.logger.setLevel(logging.INFO)
 bot = telebot.TeleBot(constants.token)
 schedule_data = json_file.JsonFile("schedule1.json")
 users_data = json_file.JsonFile(constants.users_path)
+
+
 # Lists and variables / queues
 hide_markup = telebot.types.ReplyKeyboardRemove()
-# new_last_changes_ten_queue = []
-# new_last_changes_eleven_queue = []
-# lastch_type_queue = []
-# lastch_settype_queue = []
-# schedule_type_queue = []
-# schedule_day_queue = []
-# schedule_group_queue = []
 schedule_user_type = {}
 schedule_user_day = {}
 last_changes_id = ["0", "0"]
@@ -31,7 +27,21 @@ queue = {"new_last_changes_ten": [], "new_last_changes_eleven": [], "lastch_type
          "lastch_settype": [], "schedule_type": [], "schedule_day": [], "schedule_group": [],
          "newadmin": [], "newmoder": [], "sendall": []}
 
+         
+# ALL THE MARKUPS:
+start_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+start_markup.row('Расписание')
+start_markup.row('Контакты')
 
+classes_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+classes_markup.row('10', '11')
+
+weektype_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+weektype_markup.row('Числитель', 'Знаменатель')
+weektype_markup.row('Последние изменения')
+# END OF MARKUPS
+         
+         
 # WebhookServer, process webhook calls
 class WebhookServer(object):
     @cherrypy.expose
@@ -72,15 +82,12 @@ def load_schedule(_type="1"):
 # First handle all commands available and show the menu
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-    user_markup.row('/start', '/about', '/help', '/stop')
-    user_markup.row('Расписание', 'Как тебя зовут?')
-    bot.send_message(message.from_user.id, 'Я рад, что ты к нам присоединился!\nМеню создано.',
-                     reply_markup=user_markup)
+    bot.send_message(message.from_user.id, "Я рад, что ты к нам присоединился!\nМеню создано.\nP.S. Начните вводить команду с '/', чтобы увидеть список команд",
+                     reply_markup=start_markup)
     log(message, "Меню создано.")
 
 
-@bot.message_handler(commands=['stop'])
+@bot.message_handler(commands=['hide'])
 def handle_stop(message):
     bot.send_message(message.from_user.id, "Меню убрано.", reply_markup=hide_markup)
     log(message, "Меню убрано.")
@@ -94,7 +101,7 @@ def handle_sendall(message):
         bot.send_message(message.from_user.id, "Что же мы всем отправим?")
 
         
-@bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'])
+@bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'], content_types=['text', 'photo', 'sticker', 'audio', 'voice'])
 def handle_sendall_forward(message):
     mid = message.message_id
     queue['sendall'].remove({"id": message.from_user.id})
@@ -166,13 +173,11 @@ def handle_contact(message):
 def handle_setlast(message):
     if usermgr.isadmin(users_data, message.from_user.id):
         queue["lastch_settype"].append({"id": message.from_user.id})
-        user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-        user_markup.row('10', '11')
         answer = "Выбери группу:"
-        bot.send_message(message.from_user.id, answer, reply_markup=user_markup)
+        bot.send_message(message.from_user.id, answer, reply_markup=classes_markup)
     else:
         answer = """Только админ и его приближённые способны на такое!
-Забудь, что написал это, смертный! Я тоже притворюсь, будто не видел.
+Забудь, что написал, смертный! Я тоже притворюсь, будто не видел.
 Согласен? Вот и отлично!
 ...Хееееей! Чем могу помочь?"""
         bot.send_message(message.from_user.id, answer)
@@ -183,9 +188,6 @@ def handle_setlast(message):
 def handle_about(message):
     bot.send_message(message.from_user.id, answers.aboutme)
     log(message, answers.aboutme)
-# def handle_about(message):
-#    bot.send_message(message.from_user.id, answers.aboutme)
-#    log(message, answers.aboutme)
 
 
 @bot.message_handler(commands=['help'])
@@ -202,16 +204,20 @@ def handle_photo(message):
         last_changes_id[0] = str(message.photo[-1].file_id)
         answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
+        for sub in usermgr.get_subs(users_data):
+            bot.send_message(sub['id'], "Последние изменения для 10 классов обновлены!")
         log(message, answer)
     elif {"id": message.from_user.id} in queue["new_last_changes_eleven"]:
         queue["new_last_changes_eleven"].remove({"id": message.from_user.id})
         last_changes_id[1] = str(message.photo[-1].file_id)
         answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
+        for sub in usermgr.get_subs(users_data):
+            bot.send_message(sub['id'], "Последние изменения для 11 классов обновлены!")
         log(message, answer)
 
 
-# Then texts
+# Then texts ( keep collapsed unless you love pain )
 @bot.message_handler(func=lambda message: True, content_types=["text"])
 def handle_text(message):
     answer = ""
@@ -228,7 +234,6 @@ def handle_text(message):
         else:
             answer = "Лол..."
             bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
-        log(message, answer)
     elif {"id":message.from_user.id} in queue["lastch_type"]:
         queue["lastch_type"].remove({"id":message.from_user.id})
         if (message.text == "10"):
@@ -239,7 +244,6 @@ def handle_text(message):
                     bot.send_chat_action(message.from_user.id, 'upload_photo')
                     bot.send_photo(message.from_user.id, last_changes_id[0], reply_markup=hide_markup)
                     answer = "Попытались отправить фото, надеемся, получилось."
-                    log(message, answer)
         elif (message.text == "11"):
             if last_changes_id[1] == "0":
                     answer = "Я пока не знаю изменений..."
@@ -248,7 +252,6 @@ def handle_text(message):
                     bot.send_chat_action(message.from_user.id, 'upload_photo')
                     bot.send_photo(message.from_user.id, last_changes_id[1], reply_markup=hide_markup)
                     answer = "Попытались отправить фото, надеемся, получилось."
-                    log(message, answer)
     # HANDLING SCHEDULE REQUEST (DAY OF A WEEK)
     elif {"id": message.from_user.id} in queue["schedule_type"]:
         if message.text in constants.schedule_types:
@@ -319,11 +322,11 @@ def handle_text(message):
     # HANDLING SCHEDULE REQUEST (SCHEDULE TYPE)
     elif message.text == "Расписание":
         queue["schedule_type"].append({"id": message.from_user.id})
-        user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-        user_markup.row('Числитель', 'Знаменатель')
-        user_markup.row('Последние изменения')
-        bot.send_message(message.from_user.id, answers.schedule_type, reply_markup=user_markup)
+        bot.send_message(message.from_user.id, answers.schedule_type, reply_markup=weektype_markup)
         answer = answers.schedule_type + "\nДобавлен в лист ожидания ответа."
+    elif message.text == "Контакты":
+        bot.send_message(message.from_user.id, answers.contacts)
+        answer = answers.contacts
     else:
         answer = answers.cant_understand
         bot.send_message(message.from_user.id, answer)
@@ -331,12 +334,13 @@ def handle_text(message):
     log(message, answer)
 
 # Remove webhook, it fails sometimes the set if there is a previous webhook
+# Do not comment this line. If there's a webhook set, regular polling won't work
 bot.remove_webhook()
 
-# Legacy
+# Legacy ( for debugging on a local machine )
 # bot.polling(none_stop=True, interval=0)
 
-# Set webhook
+# Set webhook ( comment the following 2 lines if debugging )
 bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
                 certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
 
@@ -349,5 +353,6 @@ cherrypy.config.update({
     'server.ssl_private_key': constants.WEBHOOK_SSL_PRIV
 })
 
+# Comment the following line when debugging
 cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
 
