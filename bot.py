@@ -35,10 +35,15 @@ start_markup.row('Контакты')
 
 classes_markup = telebot.types.ReplyKeyboardMarkup(True, True)
 classes_markup.row('10', '11')
+classes_markup.row('Отмена')
 
 weektype_markup = telebot.types.ReplyKeyboardMarkup(True, True)
 weektype_markup.row('Числитель', 'Знаменатель')
 weektype_markup.row('Последние изменения')
+weektype_markup.row('Отмена')
+
+canceling_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+canceling_markup.row('Отмена')
 # END OF MARKUPS
          
          
@@ -79,14 +84,31 @@ def load_schedule(_type="1"):
         exit()
 
 
+def cancel_queue(message: dict):
+    for item in queue:
+        if {"id": message.from_user.id} in queue[item]:
+            queue[item].remove({"id": message.from_user.id})
+            print("REMOVED FROM {0} queue".format(item))
+    print("QUEUES CANCELED")
+        
+        
 # First handle all commands available and show the menu
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    bot.send_message(message.from_user.id, "Я рад, что ты к нам присоединился!\nМеню создано.\nP.S. Начните вводить команду с '/', чтобы увидеть список команд",
+    if not usermgr.issub(users_data, message.from_user.id):
+        usermgr.adduser("subscribers", users_data, message.from_user.id)
+        bot.send_sticker(message.from_user.id, constants.thumbup)
+        bot.send_message(message.from_user.id, "Поздравляем! Теперь вы будете получать все новости!\n/unsub чтобы отписаться")
+    bot.send_message(message.from_user.id, "Мы рады, что ты к нам присоединился!\nМеню создано.\nP.S. Начните вводить команду с '/', чтобы увидеть список команд",
                      reply_markup=start_markup)
     log(message, "Меню создано.")
 
-
+@bot.message_handler(commands=['show'])
+def handle_show(message):
+    bot.send_message(message.from_user.id, "Меню создано.",
+                     reply_markup=start_markup)
+    log(message, "Меню создано.")
+    
 @bot.message_handler(commands=['hide'])
 def handle_stop(message):
     bot.send_message(message.from_user.id, "Меню убрано.", reply_markup=hide_markup)
@@ -98,11 +120,19 @@ def handle_sendall(message):
     if usermgr.isadmin(users_data, message.from_user.id) or usermgr.ismoder(users_data, message.from_user.id):
         if not {"id": message.from_user.id} in queue['sendall']:
             queue['sendall'].append({"id": message.from_user.id})
-        bot.send_message(message.from_user.id, "Что же мы всем отправим?")
-
+        bot.send_message(message.from_user.id, "Что же мы всем отправим?", reply_markup=canceling_markup)
+    else:
+        answer = "У вас недостаточно прав для выполнения этой команды"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
         
 @bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'], content_types=['text', 'photo', 'sticker', 'audio', 'voice'])
 def handle_sendall_forward(message):
+    if (message.text == "Отмена"):
+        cancel_queue(message)
+        answer = "Отмена, возвращение в главное меню"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+        log(message, answer)
+        return
     mid = message.message_id
     queue['sendall'].remove({"id": message.from_user.id})
     for sub in usermgr.get_subs(users_data):
@@ -135,7 +165,11 @@ def handle_newadmin(message):
         queue["newadmin"].append(message.from_user.id)
         if message.from_user.id in queue["newmoder"]:
             queue["newmoder"].remove(message.from_user.id)
-        bot.send_message(message.from_user.id, "Отправь контакт нового админа: ")
+        answer = "Отправь контакт нового админа: "
+        bot.send_message(message.from_user.id, answer, reply_markup=canceling_markup)
+    else:
+        answer = "У вас недостаточно прав для выполнения этой команды"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
 
 
 @bot.message_handler(commands=['newmoder'])
@@ -144,7 +178,12 @@ def handle_newmoder(message):
         queue["newmoder"].append(message.from_user.id)
         if message.from_user.id in queue["newadmin"]:
             queue["newadmin"].remove(message.from_user.id)
-        bot.send_message(message.from_user.id, "Отправь контакт нового модератора: ")
+        answer = "Отправь контакт нового модератора: "
+        bot.send_message(message.from_user.id, answer, reply_markup=canceling_markup)
+    else:
+        answer = "У вас недостаточно прав для выполнения этой команды"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+    log(message, answer)
 
 
 @bot.message_handler(content_types=['contact'])
@@ -221,36 +260,40 @@ def handle_photo(message):
 @bot.message_handler(func=lambda message: True, content_types=["text"])
 def handle_text(message):
     answer = ""
-    if {"id": message.from_user.id} in queue["lastch_settype"]:
+    if (message.text == "Отмена"):
+        cancel_queue(message)
+        answer = "Отмена, возвращение в главное меню"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+    elif {"id": message.from_user.id} in queue["lastch_settype"]:
         queue["lastch_settype"].remove({"id": message.from_user.id})
         if (message.text == "10"):
             queue["new_last_changes_ten"].append({"id": message.from_user.id})
             answer = "Загружай:"
-            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
         elif (message.text == "11"):
             queue["new_last_changes_eleven"].append({"id": message.from_user.id})
             answer = "Загружай:"
-            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
         else:
             answer = "Лол..."
-            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
     elif {"id":message.from_user.id} in queue["lastch_type"]:
         queue["lastch_type"].remove({"id":message.from_user.id})
         if (message.text == "10"):
             if last_changes_id[0] == "0":
                     answer = "Я пока не знаю изменений..."
-                    bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+                    bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
             else:
                     bot.send_chat_action(message.from_user.id, 'upload_photo')
-                    bot.send_photo(message.from_user.id, last_changes_id[0], reply_markup=hide_markup)
+                    bot.send_photo(message.from_user.id, last_changes_id[0], reply_markup=start_markup)
                     answer = "Попытались отправить фото, надеемся, получилось."
         elif (message.text == "11"):
             if last_changes_id[1] == "0":
                     answer = "Я пока не знаю изменений..."
-                    bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+                    bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
             else:
                     bot.send_chat_action(message.from_user.id, 'upload_photo')
-                    bot.send_photo(message.from_user.id, last_changes_id[1], reply_markup=hide_markup)
+                    bot.send_photo(message.from_user.id, last_changes_id[1], reply_markup=start_markup)
                     answer = "Попытались отправить фото, надеемся, получилось."
     # HANDLING SCHEDULE REQUEST (DAY OF A WEEK)
     elif {"id": message.from_user.id} in queue["schedule_type"]:
@@ -262,6 +305,7 @@ def handle_text(message):
                 queue["lastch_type"].append({"id": message.from_user.id})
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('10', '11')
+                user_markup.row("Отмена")
                 bot.send_message(message.from_user.id, answers.lastch_type, reply_markup=user_markup)
                 answer = answers.lastch_type + "\nДобавлен в лист ожидания ответа."
                 return
@@ -273,11 +317,12 @@ def handle_text(message):
                 user_markup.row('Понедельник', 'Вторник')
                 user_markup.row('Среда', 'Четверг')
                 user_markup.row('Пятница', 'Суббота')
+                user_markup.row("Отмена")
                 bot.send_message(message.from_user.id, answers.schedule_day, reply_markup=user_markup)
                 answer = answers.schedule_day + "\nДобавлен в лист ожидания ответа."
         else:
             answer = "НЕТ ТАКОГО ТИПА РАСПИСАНИЯ!"
-            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
             queue["schedule_type"].remove({"id": message.from_user.id})
     # HANDLING SCHEDULE REQUEST (GROUP)
     elif {"id": message.from_user.id} in queue["schedule_day"]:
@@ -288,11 +333,12 @@ def handle_text(message):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             user_markup.row("101", "102", "103", "104")
             user_markup.row("111", "112", "113", "114")
+            user_markup.row("Отмена")
             bot.send_message(message.from_user.id, answers.schedule_group, reply_markup=user_markup)
             answer = answers.schedule_group + "\nДобавлен в лист ожидания ответа."
         else:
             answer = "НЕТ ТАКОГО ДНЯ НЕДЕЛИ!"
-            bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+            bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
             queue["schedule_day"].remove({"id": message.from_user.id})
     # HANDLING SCHEDULE REQUEST (ASSEMBLING THE MESSAGE AND SENDING IT)
     elif {"id": message.from_user.id} in queue["schedule_group"]:
@@ -311,7 +357,7 @@ def handle_text(message):
                                          schedule[message.text][day]["fourth"])
         else:
             answer = "НЕТ ТАКОЙ ГРУППЫ!"
-        bot.send_message(message.from_user.id, answer, reply_markup=hide_markup)
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
         queue["schedule_group"].remove({"id": message.from_user.id})
     elif message.text.lower() == "как тебя зовут?":
         answer = answers.myname
@@ -329,11 +375,11 @@ def handle_text(message):
         answer = answers.contacts
     else:
         answer = answers.cant_understand
-        bot.send_message(message.from_user.id, answer)
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
     
     log(message, answer)
 
-# Remove webhook, it fails sometimes the set if there is a previous webhook
+# Remove webhook, it fails sometimes to set if there is a previous webhook
 # Do not comment this line. If there's a webhook set, regular polling won't work
 bot.remove_webhook()
 
