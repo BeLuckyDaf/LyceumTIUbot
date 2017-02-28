@@ -16,21 +16,23 @@ telebot.logger.setLevel(logging.INFO)
 bot = telebot.TeleBot(constants.token)
 schedule_data = json_file.JsonFile("schedule1.json")
 users_data = json_file.JsonFile(constants.users_path)
-
+cnslt_data = json_file.JsonFile("consultations.json")
 
 # Lists and variables / queues
 hide_markup = telebot.types.ReplyKeyboardRemove()
 schedule_user_type = {}
 schedule_user_day = {}
+consult_user_type = {}
 last_changes_id = ["0", "0"]
 queue = {"new_last_changes_ten": [], "new_last_changes_eleven": [], "lastch_type": [],
          "lastch_settype": [], "schedule_type": [], "schedule_day": [], "schedule_group": [],
-         "newadmin": [], "newmoder": [], "sendall": []}
+         "newadmin": [], "newmoder": [], "sendall": [], "consult_type": [], "consult_name": []}
 
          
 # ALL THE MARKUPS:
 start_markup = telebot.types.ReplyKeyboardMarkup(True, False)
 start_markup.row('Расписание')
+start_markup.row('Консультации')
 start_markup.row('Контакты')
 
 classes_markup = telebot.types.ReplyKeyboardMarkup(True, True)
@@ -244,7 +246,7 @@ def handle_photo(message):
         answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
         for sub in usermgr.get_subs(users_data):
-            bot.send_message(sub['id'], "Последние изменения для 10 классов обновлены!")
+            bot.send_message(sub['id'], "Последние изменения для 10 классов обновлены!", reply_markup=start_markup)
         log(message, answer)
     elif {"id": message.from_user.id} in queue["new_last_changes_eleven"]:
         queue["new_last_changes_eleven"].remove({"id": message.from_user.id})
@@ -252,7 +254,7 @@ def handle_photo(message):
         answer = "Принял файл! Последние изменения обновлены!"
         bot.send_message(message.from_user.id, answer)
         for sub in usermgr.get_subs(users_data):
-            bot.send_message(sub['id'], "Последние изменения для 11 классов обновлены!")
+            bot.send_message(sub['id'], "Последние изменения для 11 классов обновлены!", reply_markup=start_markup)
         log(message, answer)
 
 
@@ -373,6 +375,43 @@ def handle_text(message):
     elif message.text == "Контакты":
         bot.send_message(message.from_user.id, answers.contacts)
         answer = answers.contacts
+    elif message.text == "Консультации":
+        queue["consult_type"].append({"id": message.from_user.id})
+        data = cnslt_data.getcontents()
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        for i in data:
+            user_markup.row(i)
+        user_markup.row('Отмена')
+        answer = "Выбери предмет:"
+        bot.send_message(message.from_user.id, answer, reply_markup=user_markup)
+    elif {"id": message.from_user.id} in queue["consult_type"]:
+        queue["consult_type"].remove({"id": message.from_user.id})
+        data = cnslt_data.getcontents()
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+        if message.text in data:
+            consult_user_type[message.from_user.id] = message.text
+            for i in data[message.text]:
+                user_markup.row(i["name"])
+            user_markup.row('Отмена')
+            queue["consult_name"].append({"id": message.from_user.id})
+            answer = "Выбери преподавателя:"
+            bot.send_message(message.from_user.id, answer, reply_markup=user_markup)
+        else:
+            answer = "Нет такого предмета:"
+            bot.send_message(message.from_user.id, answer, reply_markup=user_markup)
+    elif {"id": message.from_user.id} in queue["consult_name"]:
+        queue["consult_name"].remove({"id": message.from_user.id})
+        data = cnslt_data.getcontents()
+        type = consult_user_type.pop(message.from_user.id)
+        boo = False
+        for i in data[type]:
+            if i["name"] == message.text:
+                boo = True
+                answer = "Предмет: {0}\nПреподаватель: {1}\nАудитория: {2}\nДни: {3}".format(type, i["name"], i["room"], i["time"])
+        if boo == False:
+            answer = "Нет такого преподавателя"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+            
     else:
         answer = answers.cant_understand
         bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
