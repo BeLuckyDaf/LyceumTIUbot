@@ -2,7 +2,7 @@
 
 import json_file
 
-usertier = ["admins", "moderators", "subscribers"]
+usertier = ["admins", "moderators", "subscribers", "allusers"]
 
 
 def adduser(tier, jsonfile: json_file.JsonFile, userid: int):
@@ -11,6 +11,12 @@ def adduser(tier, jsonfile: json_file.JsonFile, userid: int):
         if not ({'id': userid} in data[tier]):
             data[tier].append({'id': userid})
         jsonfile.writecontents(data)
+        
+def add_allusers(jsonfile: json_file.JsonFile, uname, fname, lname):
+    data = jsonfile.getcontents()
+    if not ({'uname': uname, 'fname': fname, 'lname': lname} in data["allusers"]):
+        data["allusers"].append({'uname': uname, 'fname': fname, 'lname': lname})
+    jsonfile.writecontents(data)
 
 
 def removeuser(tier, jsonfile: json_file.JsonFile, userid: int):
@@ -48,3 +54,7 @@ def issub(jsonfile: json_file.JsonFile, userid: int) -> bool:
 def get_subs(jsonfile: json_file.JsonFile):
     data = jsonfile.getcontents()
     return data["subscribers"]
+    
+def get_allusers(jsonfile: json_file.JsonFile):
+    data = jsonfile.getcontents()
+    return data["allusers"]

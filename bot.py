@@ -76,6 +76,7 @@ def log(message, answer):
     print("Ответ: {0}".format(answer))
     
     
+    
 def load_schedule(_type="1"):
     if _type == "1" or _type == "2":
         schedule_data.setpath(constants.schedule_path.format(_type))
@@ -93,10 +94,14 @@ def cancel_queue(message: dict):
             print("REMOVED FROM {0} queue".format(item))
     print("QUEUES CANCELED")
         
-        
+def sendall_message(message):
+    for sub in usermgr.get_subs(users_data):
+        bot.send_message(sub['id'], message)
+       
 # First handle all commands available and show the menu
 @bot.message_handler(commands=['start'])
 def handle_start(message):
+    usermgr.add_allusers(users_data, message.from_user.username, message.from_user.first_name, message.from_user.last_name)
     if not usermgr.issub(users_data, message.from_user.id):
         usermgr.adduser("subscribers", users_data, message.from_user.id)
         bot.send_sticker(message.from_user.id, constants.thumbup)
@@ -187,6 +192,20 @@ def handle_newmoder(message):
         bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
     log(message, answer)
 
+# a secret function 
+@bot.message_handler(commands=['get_allusers'])
+def handle_get_allusers(message):
+    if usermgr.isadmin(users_data, message.from_user.id):
+        answer = "Список всех когда-либо использовавших бота пользователей:\n---\n"
+        for i in usermgr.get_allusers(users_data):
+            answer = "{0}@{1} - {2} {3}\n---\n".format(answer, i["uname"], i["fname"], i["lname"])
+            #bot.send_message(message.from_user.id, answer)
+        answer = "{0}Отлично!".format(answer)
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+    else:
+        answer = "Ты лезешь не в своё, дело! Ходи - оглядывайся!"
+        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
@@ -212,7 +231,8 @@ def handle_contact(message):
 
 @bot.message_handler(commands=['setlast'])
 def handle_setlast(message):
-    if usermgr.isadmin(users_data, message.from_user.id):
+    if usermgr.isadmin(users_data, message.from_user.id) or usermgr.ismoder(users_data, message.from_user.id):
+        cancel_queue(message)
         queue["lastch_settype"].append({"id": message.from_user.id})
         answer = "Выбери группу:"
         bot.send_message(message.from_user.id, answer, reply_markup=classes_markup)
@@ -267,7 +287,8 @@ def handle_text(message):
         answer = "Отмена, возвращение в главное меню"
         bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
     elif {"id": message.from_user.id} in queue["lastch_settype"]:
-        queue["lastch_settype"].remove({"id": message.from_user.id})
+        # queue["lastch_settype"].remove({"id": message.from_user.id})
+        cancel_queue(message)
         if (message.text == "10"):
             queue["new_last_changes_ten"].append({"id": message.from_user.id})
             answer = "Загружай:"
@@ -423,7 +444,7 @@ def handle_text(message):
 bot.remove_webhook()
 
 # Legacy ( for debugging on a local machine )
-# bot.polling(none_stop=True, interval=0)
+#bot.polling(none_stop=True, interval=0)
 
 # Set webhook ( comment the following 2 lines if debugging )
 bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
