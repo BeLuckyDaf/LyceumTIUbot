@@ -94,27 +94,39 @@ def cancel_queue(message: dict):
             print("REMOVED FROM {0} queue".format(item))
     print("QUEUES CANCELED")
         
+        
 def sendall_message(message):
     for sub in usermgr.get_subs(users_data):
         bot.send_message(sub['id'], message)
-       
+        
+def sendall_photo(photo, caption = ""):
+    for sub in usermgr.get_subs(users_data):
+        if len(str(caption)) > 0:
+            bot.send_photo(sub['id'], photo, caption)
+        else:
+            bot.send_photo(sub['id'], photo)
+      
+
+def updateuser(user):
+    usermgr.updateuser(users_data, user["id"], user["first_name"], user["last_name"], user["username"], user["subscriber"], user["moderator"], user["admin"], user["position"])
+
+
 # First handle all commands available and show the menu
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    usermgr.add_allusers(users_data, message.from_user.username, message.from_user.first_name, message.from_user.last_name)
-    if not usermgr.issub(users_data, message.from_user.id):
-        usermgr.adduser("subscribers", users_data, message.from_user.id)
-        bot.send_sticker(message.from_user.id, constants.thumbup)
-        bot.send_message(message.from_user.id, "Поздравляем! Теперь вы будете получать все новости!\n/unsub чтобы отписаться")
+    usermgr.adduser(users_data, message.from_user.id, message.from_user.first_name, message.from_user.last_name, message.from_user.username)
+    bot.send_sticker(message.from_user.id, constants.thumbup)
     bot.send_message(message.from_user.id, "Мы рады, что ты к нам присоединился!\nМеню создано.\nP.S. Начните вводить команду с '/', чтобы увидеть список команд",
                      reply_markup=start_markup)
     log(message, "Меню создано.")
 
+    
 @bot.message_handler(commands=['show'])
 def handle_show(message):
     bot.send_message(message.from_user.id, "Меню создано.",
                      reply_markup=start_markup)
     log(message, "Меню создано.")
+    
     
 @bot.message_handler(commands=['hide'])
 def handle_stop(message):
@@ -122,7 +134,7 @@ def handle_stop(message):
     log(message, "Меню убрано.")
 
     
-@bot.message_handler(commands=['sendall'])
+@bot.message_handler(commands=['announce'])
 def handle_sendall(message):
     if usermgr.isadmin(users_data, message.from_user.id) or usermgr.ismoder(users_data, message.from_user.id):
         if not {"id": message.from_user.id} in queue['sendall']:
@@ -131,38 +143,63 @@ def handle_sendall(message):
     else:
         answer = "У вас недостаточно прав для выполнения этой команды"
         bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
-        
-@bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'], content_types=['text', 'photo', 'sticker', 'audio', 'voice'])
-def handle_sendall_forward(message):
+
+# TODO: CHANGE IT FROM FORWARDING TO JUST SENDING      
+
+def check_cancel(message: dict):
     if (message.text == "Отмена"):
         cancel_queue(message)
         answer = "Отмена, возвращение в главное меню"
         bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
         log(message, answer)
+        return True
+    else: 
+        return False
+      
+@bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'], content_types=['text'])
+def handle_sendall_text(message):
+    if check_cancel(message):
         return
-    mid = message.message_id
-    queue['sendall'].remove({"id": message.from_user.id})
-    for sub in usermgr.get_subs(users_data):
-        bot.forward_message(sub['id'], message.from_user.id, mid)        
+    user = usermgr.get_user(users_data, message.from_user.id)
+    mt = "{0} {1} ({2}):\n- - - - -\n{3}".format(user["first_name"], user["last_name"], user["position"], message.text)
+    cancel_queue(message)
+    sendall_message(mt) 
+        
+@bot.message_handler(func=lambda message: {"id": message.from_user.id} in queue['sendall'], content_types=['photo'])
+def handle_sendall_photo(message):
+    if check_cancel(message):
+        return
+    caption = message.caption
+    photo = str(message.photo[-1].file_id)
+    cancel_queue(message)
+    sendall_photo(photo, caption)
     
 @bot.message_handler(commands=['sub'])
 def handle_sub(message):
-    if not usermgr.issub(users_data, message.from_user.id):
-        usermgr.adduser("subscribers", users_data, message.from_user.id)
-        bot.send_sticker(message.from_user.id, constants.thumbup)
-        bot.send_message(message.from_user.id, "Поздравляем! Теперь вы будете получать все новости!\n/unsub чтобы отписаться")
-    else:
-        bot.send_sticker(message.from_user.id, constants.hugs)
-        bot.send_message(message.from_user.id, "Вы уже подписаны на новости! :)\nМы рады, что вы цените наш труд.")
+	if not usermgr.issub(users_data, message.from_user.id):
+		user = usermgr.get_user(users_data, message.from_user.id)
+		user["subscriber"] = True
+		usermgr.updateuser(users_data, user["id"], user["first_name"], user["last_name"], user["username"], user["subscriber"], user["moderator"], user["admin"], user["position"])
+		bot.send_sticker(message.from_user.id, constants.thumbup)
+		bot.send_message(message.from_user.id, "Поздравляем! Теперь вы будете получать все новости!\n/unsub чтобы отписаться")
+	else:
+		bot.send_sticker(message.from_user.id, constants.hugs)
+		bot.send_message(message.from_user.id, "Вы уже подписаны на новости!\nМы рады, что вы цените наш труд.")
 
 @bot.message_handler(commands=['unsub'])
 def handle_unsub(message):
     if usermgr.issub(users_data, message.from_user.id):
-        usermgr.removeuser("subscribers", users_data, message.from_user.id)
+        user = usermgr.get_user(users_data, message.from_user.id)
+        user["subscriber"] = False
+        usermgr.updateuser(users_data, user["id"], user["first_name"], user["last_name"], user["username"], user["subscriber"], user["moderator"], user["admin"], user["position"])
         bot.send_sticker(message.from_user.id, constants.armsin)
         bot.send_message(message.from_user.id, """Сожалеем, что вы приняли такое решение!
 Мы будем благодарны, если вы расскажете, что вам не понравилось.
 Напишите нам: beluckydaf@gmail.com""")
+        bot.send_contact(message.from_user.id, "+79129992548", "Vladislav", "Smirnov")
+    else:
+        bot.send_sticker(message.from_user.id, constants.armsin)
+        bot.send_message(message.from_user.id, "Вы итак не подписаны на новости! :(\n/sub - подписаться")
         bot.send_contact(message.from_user.id, "+79129992548", "Vladislav", "Smirnov")
     
     
@@ -193,15 +230,15 @@ def handle_newmoder(message):
     log(message, answer)
 
 # a secret function 
-@bot.message_handler(commands=['get_allusers'])
+@bot.message_handler(commands=['get_all_users'])
 def handle_get_allusers(message):
     if usermgr.isadmin(users_data, message.from_user.id):
         answer = "Список всех когда-либо использовавших бота пользователей:\n---\n"
-        for i in usermgr.get_allusers(users_data):
-            answer = "{0}@{1} - {2} {3}\n---\n".format(answer, i["uname"], i["fname"], i["lname"])
+        for i in usermgr.get_all_users(users_data):
+            answer = "{0}*{1} {2}* - _{3}_ - @{4}\n---\n".format(answer, i["first_name"], i["last_name"], i["position"], i["username"])
             #bot.send_message(message.from_user.id, answer)
         answer = "{0}Отлично!".format(answer)
-        bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
+        bot.send_message(message.from_user.id, answer, parse_mode="Markdown", reply_markup=start_markup)
     else:
         answer = "Ты лезешь не в своё, дело! Ходи - оглядывайся!"
         bot.send_message(message.from_user.id, answer, reply_markup=start_markup)
@@ -210,20 +247,21 @@ def handle_get_allusers(message):
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
     if not message.contact.user_id:
-        if message.from_user.id in queue["newadmin"]:
-            queue["newadmin"].remove(message.from_user.id)
-        elif message.from_user.id in queue["newmoder"]:
-            queue["newmoder"].remove(message.from_user.id)
+        cancel_queue(message)
         bot.send_message(message.from_user.id, "Увы, этого человека нет в Telegram.")
     if message.from_user.id in queue["newadmin"]:
-        queue["newadmin"].remove(message.from_user.id)
-        usermgr.adduser("admins", users_data, message.contact.user_id)
+        cancel_queue(message)
+        user = usermgr.get_user(users_data, message.contact.user_id)
+        user["admin"] = True
+        updateuser(user)
         bot.send_message(message.from_user.id, "Готово!")
         bot.send_message(message.contact.user_id, answers.admin_greeting)
         bot.send_message(message.contact.user_id, answers.great_resp)
     elif message.from_user.id in queue["newmoder"]:
-        queue["newmoder"].remove(message.from_user.id)
-        usermgr.adduser("moderators", users_data, message.contact.user_id) 
+        cancel_queue(message)
+        user = usermgr.get_user(users_data, message.contact.user_id)
+        user["moderator"] = True
+        updateuser(user)
         bot.send_message(message.from_user.id, "Готово!")
         bot.send_message(message.contact.user_id, answers.moderator_greeting)
         bot.send_message(message.contact.user_id, answers.great_resp)
@@ -276,6 +314,8 @@ def handle_photo(message):
         for sub in usermgr.get_subs(users_data):
             bot.send_message(sub['id'], "Последние изменения для 11 классов обновлены!", reply_markup=start_markup)
         log(message, answer)
+    else:
+        cancel_queue(message)
 
 
 # Then texts ( keep collapsed unless you love pain )
@@ -444,11 +484,11 @@ def handle_text(message):
 bot.remove_webhook()
 
 # Legacy ( for debugging on a local machine )
-#bot.polling(none_stop=True, interval=0)
+bot.polling(none_stop=True, interval=0)
 
 # Set webhook ( comment the following 2 lines if debugging )
-bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
-                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+#bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
+#                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
 
 # Start cherrypy server
 cherrypy.config.update({
@@ -460,5 +500,5 @@ cherrypy.config.update({
 })
 
 # Comment the following line when debugging
-cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
+#cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
 

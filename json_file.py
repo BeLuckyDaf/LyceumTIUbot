@@ -14,15 +14,18 @@ class JsonFile(object):
         self.encod = encod
         self.data = object
 
+        
     def getcontents(self):
         with open(self.filepath, "r", encoding=self.encod) as file:
             data_str = file.read().replace('\n', '')
             self.data = json.loads(data_str)
         return self.data
 
+        
     def setpath(self, newpath):
         self.filepath = newpath
 
+        
     def writecontents(self, contents: dict):
         with open(self.filepath, "w", encoding=self.encod) as file:
             file.write(json.dumps(contents))
