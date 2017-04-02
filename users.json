@@ -1,1 +1,15 @@
-{"users": [{"id": 146505982, "first_name": "Vladislav", "last_name": "Smirnov", "username": "BeLuckyDaf", "subscriber": true, "moderator": true, "admin": true, "position": "Lead Developer"}]}
+{
+    "users":
+    [
+        {
+            "id": 146505982, 
+            "first_name": "Vladislav", 
+            "last_name": "Smirnov", 
+            "username": "BeLuckyDaf", 
+            "subscriber": true, 
+            "moderator": true, 
+            "admin": true, 
+            "position": "Lead Developer"
+        }
+    ]
+}
