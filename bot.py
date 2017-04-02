@@ -484,10 +484,10 @@ def handle_text(message):
 bot.remove_webhook()
 
 # Legacy ( for debugging on a local machine )
-bot.polling(none_stop=True, interval=0)
+#bot.polling(none_stop=True, interval=0)
 
 # Set webhook ( comment the following 2 lines if debugging )
-#bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
+bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
 #                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
 
 # Start cherrypy server
@@ -500,5 +500,5 @@ cherrypy.config.update({
 })
 
 # Comment the following line when debugging
-#cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
+cherrypy.quickstart(WebhookServer(), constants.WEBHOOK_URL_PATH, {'/': {}})
 
