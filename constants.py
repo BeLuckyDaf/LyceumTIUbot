@@ -10,6 +10,14 @@ schedule_days = ["Понедельник", "Вторник", "Среда", "Че
 groups = ["101", "102", "103", "104", "111", "112", "113", "114"]
 # admins = [146505982, 183562293]
 
+# Quick'n'dirty SSL certificate generation:
+#
+# openssl genrsa -out webhook_pkey.pem 2048
+# openssl req -new -x509 -days 3650 -key webhook_pkey.pem -out webhook_cert.pem
+#
+# When asked for "Common Name (e.g. server FQDN or YOUR name)" you should reply
+# with the same value in you put in WEBHOOK_HOST
+
 # CHERRYPY CONSTANTS
 WEBHOOK_HOST = "138.68.134.251"
 WEBHOOK_PORT = 88
