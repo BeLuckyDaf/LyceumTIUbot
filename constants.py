@@ -19,7 +19,7 @@ groups = ["101", "102", "103", "104", "111", "112", "113", "114"]
 # with the same value in you put in WEBHOOK_HOST
 
 # CHERRYPY CONSTANTS
-WEBHOOK_HOST = "138.68.134.251"
+WEBHOOK_HOST = "188.166.82.60"
 WEBHOOK_PORT = 88
 WEBHOOK_LISTEN = "0.0.0.0"
 
