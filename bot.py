@@ -488,7 +488,7 @@ bot.remove_webhook()
 
 # Set webhook ( comment the following 2 lines if debugging )
 bot.set_webhook(url=constants.WEBHOOK_URL_BASE+constants.WEBHOOK_URL_PATH,
-#                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
+                certificate=open(constants.WEBHOOK_SSL_CERT, 'r'))
 
 # Start cherrypy server
 cherrypy.config.update({
