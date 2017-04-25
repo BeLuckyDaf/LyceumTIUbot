@@ -59,4 +59,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# BACKUPS
+users-backup.json
+
 # End of https://www.gitignore.io/api/pycharm,windows
