@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Important
-token = "316879287:AAGa7sj9yaO-3FjL55U97cNaKZaXTcIl6Dg"
+token = "<TOKEN>"
 schedule_path = "schedule{0}.json"
 users_path = "users.json"
 # Less important
@@ -19,10 +19,11 @@ groups = ["101", "102", "103", "104", "111", "112", "113", "114"]
 # with the same value in you put in WEBHOOK_HOST
 
 # CHERRYPY CONSTANTS
-WEBHOOK_HOST = "188.166.82.60"
+WEBHOOK_HOST = "<IP>"
 WEBHOOK_PORT = 88
 WEBHOOK_LISTEN = "0.0.0.0"
 
+# Unique for a particular IP address
 WEBHOOK_SSL_CERT = './webhook_cert.pem'  # Path to the ssl certificate
 WEBHOOK_SSL_PRIV = './webhook_pkey.pem'  # Path to the ssl private key
 
